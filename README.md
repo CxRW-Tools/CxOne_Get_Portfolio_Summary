@@ -29,10 +29,9 @@ python get_portfolio_summary.py --base_url BASE_URL --tenant_name TENANT_NAME --
 
 ### Arguments
 
-- `--base_url`: The base URL for the Checkmarx One API.
+- `--base_url`: The base URL of the Checkmarx One region.
 - `--tenant_name`: Your Checkmarx One tenant name.
 - `--api_key`: API key for authentication.
-- `--email`: Email address to send the report to.
 - `--output`: The filename where the report will be saved.
 - `--debug`: (Optional) Enable detailed debug output.
 
@@ -41,7 +40,7 @@ python get_portfolio_summary.py --base_url BASE_URL --tenant_name TENANT_NAME --
 Here is an example command to run the script:
 
 ```bash
-python get_portfolio_summary.py --base_url https://ast.checkmarx.net --tenant_name myTenant --api_key 12345abcde --email example@example.com --output report.csv --debug
+python get_portfolio_summary.py --base_url https://ast.checkmarx.net --tenant_name myTenant --api_key 12345abcde --output report.csv --debug
 ```
 
 This command will authenticate with Checkmarx One, create a report, monitor its status until completion, and download it as `report.csv`.
