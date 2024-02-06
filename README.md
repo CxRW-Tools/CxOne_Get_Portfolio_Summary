@@ -2,7 +2,22 @@
 
 ## Summary
 
-This tool automates the process of creating and downloading a "portfolio summary" report from  Checkmarx One. Specifically, it provides a CSV file with a list of projects and key related fields.
+This tool automates the process of creating and downloading a summary report of all projects from Checkmarx One. Specifically, it provides a CSV file with the following fields:
+
+- Project ID
+- Project Name
+- Created At
+- Origin
+- Project Tags
+- Groups
+- Assigned To Applications
+- Last Scan Date
+- Project Risk Level
+- Total Vulnerabilities
+- Critical Vulnerabilities
+- High Vulnerabilities
+- Medium Vulnerabilities
+- Low Vulnerabilities
 
 ## Usage
 
