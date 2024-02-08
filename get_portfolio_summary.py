@@ -399,6 +399,11 @@ def main():
         # get the scan-related data for each project
         for project in projects_data:
             project_counter += 1
+
+            # inefficient but effective way to ensure the auth token doesn't expire: reauthenticate every 20 projects :-|
+            if project_counter % 20 == 0:
+                auth_token = authenticate(args.api_key)
+
             print(f"Processing data for project {project_counter}/{projects_count}")
 
             scan_data = get_last_scan_data(project['id'])
