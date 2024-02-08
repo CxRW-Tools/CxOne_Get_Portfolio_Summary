@@ -24,7 +24,7 @@ This tool automates the process of creating and downloading a summary report of 
 Execute the script with the required parameters to create and download a report:
 
 ```bash
-python get_portfolio_summary.py --base_url BASE_URL --tenant_name TENANT_NAME --api_key API_KEY  --output OUTPUT_FILENAME [--debug]
+python get_portfolio_summary.py --base_url BASE_URL --tenant_name TENANT_NAME --api_key API_KEY  --output OUTPUT_FILENAME [--build] [--debug]
 ```
 
 ### Arguments
@@ -33,6 +33,7 @@ python get_portfolio_summary.py --base_url BASE_URL --tenant_name TENANT_NAME --
 - `--tenant_name`: Your Checkmarx One tenant name.
 - `--api_key`: API key for authentication.
 - `--output`: The filename where the report will be saved.
+- `--build`: (Optional) Use an alternative approach and build the CSV piece by piece; this is to be used if the number of projects is large and causing a failure of the primary approach
 - `--debug`: (Optional) Enable detailed debug output.
 
 ## Example
