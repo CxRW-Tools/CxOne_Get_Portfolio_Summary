@@ -203,16 +203,16 @@ def get_last_scan_data(projectId):
         # Assuming the first item in the response is the relevant scan data for the project
         scan_data = scans[0]
 
-        # Initialize the result dictionary with keys for all vulnerability levels, defaulting to 0
+        # Initialize the result dictionary with keys for all fields, applying default values as needed
         result = {
-            "sourceOrigin": scan_data.get("sourceOrigin"),
-            "totalCounter": scan_data.get("totalCounter"),
-            "lastScanDate": scan_data.get("lastScanDate"),
-            "riskLevel": scan_data.get("riskLevel"),
-            "Critical": 0,  # Default to 0
-            "High": 0,  # Default to 0
-            "Medium": 0,  # Default to 0
-            "Low": 0,  # Default to 0
+            "sourceOrigin": scan_data.get("sourceOrigin", "NO DATA FOUND"),  # Default to special string if not found
+            "totalCounter": scan_data.get("totalCounter", 0),  # Default to 0
+            "lastScanDate": scan_data.get("lastScanDate", "NO DATA FOUND"),  # Default to special string if not found
+            "riskLevel": scan_data.get("riskLevel", "NO DATA FOUND"),  # Default to special string if not found
+            "Critical": scan_data.get("Critical", 0),  # Default to 0
+            "High": scan_data.get("High", 0),  # Default to 0
+            "Medium": scan_data.get("Medium", 0),  # Default to 0
+            "Low": scan_data.get("Low", 0),  # Default to 0
         }
 
         # Update the result dictionary with actual counts if present
@@ -436,7 +436,9 @@ def main():
             # Append the list of resolved application names to the project data
             project["applicationNames"] = application_names
 
-            
+
+
+
         # output to the csv
         with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file)
