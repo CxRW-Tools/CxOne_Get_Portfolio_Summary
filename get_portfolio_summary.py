@@ -1,17 +1,22 @@
 import sys
 import requests
 import argparse
-import json
 import time
+import json
+
 import csv
 
-# Global variables
+# Standard global variables
 base_url = None
 tenant_name = None
 auth_url = None
 iam_base_url = None
+api_key = None
 auth_token = None
+token_expiration = 0 # initialize so we have to authenticate
 debug = False
+
+# Global variables
 application_cache = {}
 group_cache = {}
 
@@ -37,46 +42,57 @@ def generate_auth_url():
         print("Error: Invalid base_url provided")
         sys.exit(1)
 
-def authenticate(api_key):
-    if auth_url is None:
-        return None
+def authenticate():
+    global auth_token, token_expiration
+
+    # if the token hasn't expired then we don't need to authenticate
+    if time.time() < token_expiration - 60:
+        if debug:
+            print("Token still valid.")
+        return
     
     if debug:
-        print("Authenticating with API...")
+        print("Authenticating with API key...")
         
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': f'Bearer {api_key}'
     }
     data = {
         'grant_type': 'refresh_token',
         'client_id': 'ast-app',
         'refresh_token': api_key
     }
-    
+
     try:
         response = requests.post(auth_url, headers=headers, data=data)
         response.raise_for_status()
         
         json_response = response.json()
-        access_token = json_response.get('access_token')
-        
-        if not access_token:
+        auth_token = json_response.get('access_token')
+        if not auth_token:
             print("Error: Access token not found in the response.")
-            return None
+            sys.exit(1)
         
+        expires_in = json_response.get('expires_in')
+        
+        if not expires_in:
+            expires_in = 600
+
+        token_expiration = time.time() + expires_in
+
         if debug:
-            print("Successfully authenticated")
-        
-        return access_token
+            print("Authenticated successfully.")
+      
     except requests.exceptions.RequestException as e:
         print(f"An error occurred during authentication: {e}")
         sys.exit(1)
 
 def create_report():
+    authenticate()
+
     if debug:
         print("Creating report...")
-        
+
     headers = {
         "Content-Type": "application/json; version=1.0",
         "Accept": "application/json",
@@ -90,7 +106,7 @@ def create_report():
             "projectId": "",
         }
     }
-    
+
     try:
         response = requests.post(f"{base_url}/api/reports/", headers=headers, json=data)
         response.raise_for_status()
@@ -108,6 +124,8 @@ def create_report():
         sys.exit(1)
 
 def download_report(report_id, filename):
+    authenticate()
+
     if debug:
         print(f"Downloading report {report_id}...")
     
@@ -131,6 +149,8 @@ def download_report(report_id, filename):
         sys.exit(1)
 
 def get_projects():
+    authenticate()
+
     projects_data = []
     offset = 0
     total_count = 0
@@ -146,6 +166,7 @@ def get_projects():
 
     while True:
         try:
+            authenticate()
             response = requests.get(f"{base_url}/api/projects/",headers=headers,params={"offset": offset})
             response.raise_for_status()
             response_data = response.json()
@@ -182,6 +203,8 @@ def get_projects():
     return projects_data
 
 def get_last_scan_data(projectId):
+    authenticate()
+
     if debug:
         print(f"Fetching last scan data for project ID: {projectId}")
 
@@ -232,6 +255,8 @@ def get_last_scan_data(projectId):
         return {}
 
 def resolve_application_id(application_id):
+    authenticate()
+
     global application_cache
     
     if debug:
@@ -277,6 +302,8 @@ def resolve_application_id(application_id):
         return "unresolvable application id"
 
 def resolve_group_id(group_id):
+    authenticate()
+
     global group_cache
     
     if debug:
@@ -328,6 +355,7 @@ def main():
     global auth_url
     global auth_token
     global iam_base_url
+    global api_key
 
     # Parse and handle various CLI flags
     parser = argparse.ArgumentParser(description='Export a CxOne scan workflow as a CSV file')
@@ -346,15 +374,10 @@ def main():
     build = args.build
     debug = args.debug
     csv_file_path = args.output
-            
     if args.iam_base_url:
         iam_base_url = args.iam_base_url
-    
     auth_url = generate_auth_url()
-    auth_token = authenticate(args.api_key)
-
-    if auth_token is None:
-        return
+    api_key = args.api_key
 
     if not build: # the default approach
         report_id = create_report()
@@ -367,6 +390,7 @@ def main():
             }
                 
             while True:
+                authenticate()
                 response = requests.get(f"{base_url}/api/reports/{report_id}", headers=headers)
                 response.raise_for_status()
 
