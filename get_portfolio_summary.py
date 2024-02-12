@@ -88,10 +88,10 @@ def authenticate():
         sys.exit(1)
 
 def create_report():
-    authenticate()
-
     if debug:
         print("Creating report...")
+
+    authenticate()
 
     headers = {
         "Content-Type": "application/json; version=1.0",
@@ -124,11 +124,11 @@ def create_report():
         sys.exit(1)
 
 def download_report(report_id, filename):
-    authenticate()
-
     if debug:
         print(f"Downloading report {report_id}...")
-    
+
+    authenticate()
+
     headers = {
         'Authorization': f'Bearer {auth_token}',
         'Accept': 'application/octet-stream',
@@ -149,14 +149,14 @@ def download_report(report_id, filename):
         sys.exit(1)
 
 def get_projects():
+    if debug:
+        print("Fetching project list...")
+
     authenticate()
 
     projects_data = []
     offset = 0
     total_count = 0
-
-    if debug:
-        print("Fetching project list...")
 
     headers = {
         "Content-Type": "application/json; version=1.0",
@@ -203,10 +203,10 @@ def get_projects():
     return projects_data
 
 def get_last_scan_data(projectId):
-    authenticate()
-
     if debug:
         print(f"Fetching last scan data for project ID: {projectId}")
+
+    authenticate()
 
     headers = {
         "Content-Type": "application/json; version=1.0",
@@ -255,13 +255,13 @@ def get_last_scan_data(projectId):
         return {}
 
 def resolve_application_id(application_id):
+    if debug:
+        print(f"Attempting to resolve application ID: {application_id}")
+
     authenticate()
 
     global application_cache
-    
-    if debug:
-        print(f"Attempting to resolve application ID: {application_id}")
-    
+
     # Check if the application_id is already in the cache
     if application_id in application_cache:
         if debug:
@@ -302,13 +302,13 @@ def resolve_application_id(application_id):
         return "unresolvable application id"
 
 def resolve_group_id(group_id):
+    if debug:
+        print(f"Attempting to resolve group ID: {group_id}")
+
     authenticate()
 
     global group_cache
-    
-    if debug:
-        print(f"Attempting to resolve group ID: {group_id}")
-    
+
     # Check if the grop_id is already in the cache
     if group_id in group_cache:
         if debug:
