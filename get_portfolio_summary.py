@@ -330,6 +330,8 @@ def resolve_group_id(group_id):
         response.raise_for_status()
         group_data = response.json()
 
+        print(f"Group:",json.dumps(group_data,indent=4))
+
         # Extract the group name from the response and cache it
         group_name = group_data.get('name')
         if group_name:
@@ -423,10 +425,6 @@ def main():
         # get the scan-related data for each project
         for project in projects_data:
             project_counter += 1
-
-            # inefficient but effective way to ensure the auth token doesn't expire: reauthenticate every 20 projects :-|
-            if project_counter % 20 == 0:
-                auth_token = authenticate(args.api_key)
 
             print(f"Processing data for project {project_counter}/{projects_count}")
 
