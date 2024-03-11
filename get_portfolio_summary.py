@@ -176,6 +176,9 @@ def get_projects():
 
             projects = response_data['projects']
 
+            if debug:
+                print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
+
             for project in projects:
                 project_info = {
                     'id': project['id'],
@@ -462,38 +465,58 @@ def main():
 
 
         # output to the csv
-        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(["Project ID", "Project Name", "Created At", "Origin", "Project Tags", "Groups",
-            "Assigned To Applications", "Last Scan Date", "Project Risk Level",
-            "Total Vulnerabilities", "Critical Vulnerabilities", "High Vulnerabilities",
-            "Medium Vulnerabilities", "Low Vulnerabilities"])
+        try:
+            # Ensure projects_data is a list
+            if not isinstance(projects_data, list):
+                raise ValueError("projects_data must be a list")
 
-            # Iterate over the project data
-            for project in projects_data:
-        
-                # Prepare the row data
-                row = [
-                    project["id"],
-                    project["name"],
-                    project["createdAt"],
-                    project.get("sourceOrigin", ""),
-                    ", ".join(sorted([f"{k}:{v}" for k, v in project.get("tags", {}).items()])),
-                    ", ".join(sorted(project.get("groupNames", []))),
-                    ", ".join(sorted(project.get("applicationNames", []))),
-                    project["lastScanDate"],
-                    project["riskLevel"],
-                    project["totalCounter"],
-                    project.get("Critical", 0),
-                    project.get("High", 0),
-                    project.get("Medium", 0),
-                    project.get("Low", 0),
-                ]
+            # Attempt to write to the CSV file
+            with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(["Project ID", "Project Name", "Created At", "Origin", "Project Tags", "Groups",
+                                "Assigned To Applications", "Last Scan Date", "Project Risk Level",
+                                "Total Vulnerabilities", "Critical Vulnerabilities", "High Vulnerabilities",
+                                "Medium Vulnerabilities", "Low Vulnerabilities"])
 
-                # Write the project row to the CSV file
-                writer.writerow(row)
+                # Iterate over the project data
+                for project in projects_data:
+                    if not isinstance(project, dict):
+                        # Skip the current iteration if project is not a dictionary
+                        print(f"Skipping a non-dict project data: {project}")
+                        continue
 
-        print(f"CSV file has been created at: {csv_file_path}")
+                    # Prepare the row data with proper error handling
+                    try:
+                        row = [
+                            project["id"],
+                            project["name"],
+                            project["createdAt"],
+                            project.get("sourceOrigin", ""),
+                            ", ".join(sorted([f"{k}:{v}" for k, v in project.get("tags", {}).items()])),
+                            ", ".join(sorted(project.get("groupNames", []))),
+                            ", ".join(sorted(project.get("applicationNames", []))),
+                            project["lastScanDate"],
+                            project["riskLevel"],
+                            project["totalCounter"],
+                            project.get("Critical", 0),
+                            project.get("High", 0),
+                            project.get("Medium", 0),
+                            project.get("Low", 0),
+                        ]
+                    except KeyError as e:
+                        print(f"A required project field is missing: {e}. Project ID: {project.get('id', 'Unknown')}")
+                        continue  # Skip to the next project
+
+                    # Write the project row to the CSV file
+                    writer.writerow(row)
+
+            print(f"CSV file has been created at: {csv_file_path}")
+        except FileNotFoundError:
+            print(f"Error: The file path {csv_file_path} does not exist.")
+        except PermissionError:
+            print(f"Error: Permission denied when trying to write to {csv_file_path}.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     main()
