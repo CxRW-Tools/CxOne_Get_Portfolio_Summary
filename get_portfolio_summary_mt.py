@@ -3,8 +3,11 @@ import requests
 import argparse
 import time
 import json
-
 import csv
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+import pprint
 
 # Standard global variables
 base_url = None
@@ -176,7 +179,8 @@ def get_projects():
 
             projects = response_data['projects']
 
-            print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
+            if debug:
+                print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
 
             for project in projects:
                 project_info = {
@@ -204,6 +208,38 @@ def get_projects():
 
     return projects_data
 
+def process_project(project):
+    scan_data = get_last_scan_data(project['id'])
+    project.update(scan_data)
+
+    # Resolve the group names
+    group_names = []
+
+        # Loop through each group ID in the project's "groups" field
+    for group_id in project.get('groups', []):
+        # Resolve each group ID to a name
+        group_name = resolve_group_id(group_id)
+        # Add the resolved name to the list of group names for this project
+        group_names.append(group_name)
+
+    # Append the list of resolved group names to the project data
+    project["groupNames"] = group_names
+
+    # Resolve application names
+    application_names = []
+    
+    # Loop through each application ID in the project's "applicationIds" field
+    for application_id in project.get('applicationIds', []):
+        # Resolve each application ID to a name
+        application_name = resolve_application_id(application_id)
+        # Add the resolved name to the list of application names for this project
+        application_names.append(application_name)
+
+    # Append the list of resolved application names to the project data
+    project["applicationNames"] = application_names
+
+    return project
+
 def get_last_scan_data(projectId):
     if debug:
         print(f"Fetching last scan data for project ID: {projectId}")
@@ -222,7 +258,6 @@ def get_last_scan_data(projectId):
 
         scans = response.json()
         if not scans:
-            print(f"No scan data found for project ID: {projectId}")
             return {}
 
         # Assuming the first item in the response is the relevant scan data for the project
@@ -418,53 +453,43 @@ def main():
 
     else: # Build the report from smaller, individual API calls
         # get the projects data
+        if not debug:
+            print("Getting projects data...", end="", flush=True)
         projects_data = get_projects()
+        updated_projects = []
+
+        if not debug:
+            print("completed!")
         project_counter = 0
         projects_count = len(projects_data)
 
+        # Initialize tqdm object with the date range if debug is False
+        pbar = tqdm(total=projects_count, desc="Processing project data") if not debug else None
+
         # get the scan-related data for each project
-        for project in projects_data:
-            project_counter += 1
-
-            print(f"Processing data for project {project_counter}/{projects_count}")
-
-            scan_data = get_last_scan_data(project['id'])
-            # Append scan data to the project data
-            project.update(scan_data)
-
-            # Resolve the group names
-            group_names = []
-
-             # Loop through each group ID in the project's "groups" field
-            for group_id in project.get('groups', []):
-                # Resolve each group ID to a name
-                group_name = resolve_group_id(group_id)
-                # Add the resolved name to the list of group names for this project
-                group_names.append(group_name)
-
-            # Append the list of resolved group names to the project data
-            project["groupNames"] = group_names
-
-            # Resolve application names
-            application_names = []
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            # Submit all projects for processing
+            future_to_project = {executor.submit(process_project, project): project for project in projects_data}
             
-            # Loop through each application ID in the project's "applicationIds" field
-            for application_id in project.get('applicationIds', []):
-                # Resolve each application ID to a name
-                application_name = resolve_application_id(application_id)
-                # Add the resolved name to the list of application names for this project
-                application_names.append(application_name)
+            for future in as_completed(future_to_project):
+                # Result of the process_project function
+                updated_project = future.result()
+                updated_projects.append(updated_project)
+                
+                # Update tqdm object and debug print
+                if debug:
+                    print(f"Processed project {updated_project['id']}")
+                if pbar:  # Ensure pbar is defined and use it properly
+                    pbar.update(1)
 
-            # Append the list of resolved application names to the project data
-            project["applicationNames"] = application_names
-
-
-
+        # Close tqdm object
+        if pbar:
+            pbar.close()
 
         # output to the csv
         try:
             # Ensure projects_data is a list
-            if not isinstance(projects_data, list):
+            if not isinstance(updated_projects, list):
                 raise ValueError("projects_data must be a list")
 
             # Attempt to write to the CSV file
@@ -476,7 +501,7 @@ def main():
                                 "Medium Vulnerabilities", "Low Vulnerabilities"])
 
                 # Iterate over the project data
-                for project in projects_data:
+                for project in updated_projects:
                     if not isinstance(project, dict):
                         # Skip the current iteration if project is not a dictionary
                         print(f"Skipping a non-dict project data: {project}")
