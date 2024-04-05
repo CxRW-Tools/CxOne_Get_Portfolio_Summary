@@ -151,15 +151,32 @@ def download_report(report_id, filename):
         print(f"An error occurred during report download: {e}")
         sys.exit(1)
 
+def fetch_project_batch(offset, batch_size, headers, base_url, debug):
+    projects_data = []
+    authenticate()
+    try:
+        response = requests.get(f"{base_url}/api/projects/", headers=headers, params={"offset": offset, "limit": batch_size})
+        response.raise_for_status()
+        projects = response.json()['projects']
+        for project in projects:
+            project_info = {
+                'id': project['id'],
+                'name': project['name'],
+                'createdAt': project['createdAt'],
+                'groups': project['groups'],
+                'tags': project['tags'],
+                'applicationIds': project['applicationIds']
+            }
+            projects_data.append(project_info)
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while fetching projects at offset {offset}: {e}")
+    return projects_data
+
 def get_projects():
     if debug:
         print("Fetching project list...")
 
     authenticate()
-
-    projects_data = []
-    offset = 0
-    total_count = 0
 
     headers = {
         "Content-Type": "application/json; version=1.0",
@@ -167,41 +184,24 @@ def get_projects():
         "Authorization": f"Bearer {auth_token}"
     }
 
-    while True:
-        try:
-            authenticate()
-            response = requests.get(f"{base_url}/api/projects/",headers=headers,params={"offset": offset})
-            response.raise_for_status()
-            response_data = response.json()
+    # First fetch to get total count
+    try:
+        response = requests.get(f"{base_url}/api/projects/", headers=headers, params={"offset": 0, "limit": 1})
+        response.raise_for_status()
+        total_count = response.json()['totalCount']
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while fetching the project list: {e}")
+        sys.exit(1)
 
-            if offset == 0:
-                total_count = response_data['totalCount']
-
-            projects = response_data['projects']
-
-            if debug:
-                print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
-
-            for project in projects:
-                project_info = {
-                    'id': project['id'],
-                    'name': project['name'],
-                    'createdAt': project['createdAt'],
-                    'groups': project['groups'],
-                    'tags': project['tags'],
-                    'applicationIds': project['applicationIds']
-                }
-                projects_data.append(project_info)
-
-            # Break the loop if we've retrieved all records
-            if len(projects_data) >= total_count:
-                break
-
-            offset += len(projects)
-
-        except requests.exceptions.RequestException as e:
-            print(f"An error occurred while fetching the project list: {e}")
-            sys.exit(1)
+    batch_size = 100
+    projects_data = []
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(fetch_project_batch, offset, batch_size, headers, base_url, debug)
+            for offset in range(0, total_count, batch_size)
+        ]
+        for future in as_completed(futures):
+            projects_data.extend(future.result())
 
     if debug:
         print(f"Successfully fetched {len(projects_data)} projects.")
@@ -468,7 +468,7 @@ def main():
         pbar = tqdm(total=projects_count, desc="Processing project data") if not debug else None
 
         # get the scan-related data for each project
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor() as executor:
             # Submit all projects for processing
             future_to_project = {executor.submit(process_project, project): project for project in projects_data}
             
