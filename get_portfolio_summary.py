@@ -176,8 +176,7 @@ def get_projects():
 
             projects = response_data['projects']
 
-            if debug:
-                print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
+            print(f"Getting info for projects {offset+1}-{offset+len(projects)} of {total_count}")
 
             for project in projects:
                 project_info = {
@@ -332,8 +331,6 @@ def resolve_group_id(group_id):
         response = requests.get(f"{iam_base_url}/auth/admin/realms/{tenant_name}/groups/{group_id}", headers=headers)
         response.raise_for_status()
         group_data = response.json()
-
-        print(f"Group:",json.dumps(group_data,indent=4))
 
         # Extract the group name from the response and cache it
         group_name = group_data.get('name')
