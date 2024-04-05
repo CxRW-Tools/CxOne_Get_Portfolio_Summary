@@ -455,7 +455,7 @@ def main():
     else: # Build the report from smaller, individual API calls
         # get the projects data
         if not debug:
-            print("Getting projects data...", end="", flush=True)
+            print("Getting project data...", end="", flush=True)
         projects_data = get_projects()
         updated_projects = []
 
