@@ -409,7 +409,8 @@ def main():
     base_url = args.base_url
     tenant_name = args.tenant_name
     build = args.build
-    debug = args.debug
+    if args.debug:
+        print("Debug mode has been disabled for the multi-threaded version.")
     csv_file_path = args.output
     if args.iam_base_url:
         iam_base_url = args.iam_base_url
@@ -467,7 +468,7 @@ def main():
         pbar = tqdm(total=projects_count, desc="Processing project data") if not debug else None
 
         # get the scan-related data for each project
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=20) as executor:
             # Submit all projects for processing
             future_to_project = {executor.submit(process_project, project): project for project in projects_data}
             
